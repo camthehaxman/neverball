@@ -359,20 +359,11 @@ static void game_draw_fore(struct s_rend *rend,
         {
             /* Draw the billboards, entity beams, and coin particles. */
 
-            glDisable(GL_LIGHTING);
-            glDepthMask(GL_FALSE);
-            {
-                sol_bill(draw, rend, M, t);
-                
-                game_draw_goals(rend, gd, M, t);
-                game_draw_jumps(rend, gd, M, t);
-                game_draw_swchs(rend, draw->vary);
-                
-                part_draw_coin(rend);
-                glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
-            }
-            glDepthMask(GL_TRUE);
-            glEnable(GL_LIGHTING);
+            sol_bill(draw, rend, M, t);
+            game_draw_goals(rend, gd, M, t);
+            game_draw_jumps(rend, gd, M, t);
+            game_draw_swchs(rend, draw->vary);
+            part_draw_coin(rend);
         }
         glDepthMask(GL_TRUE);
 
