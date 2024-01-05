@@ -124,6 +124,9 @@ static void *image_load_png(const char *filename, int *width,
         }
 
         png_free(readp, bytep);
+
+        if (strstr(filename, "goal/goal.png") || strstr(filename, "jump/jump.png"))
+            printf("%s(\"%s\"): b = %i\n", __func__, filename, b);
     }
     else p = NULL;
 

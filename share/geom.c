@@ -512,6 +512,12 @@ static void goal_part_draw(struct s_rend *rend, GLfloat s)
     glScalef(0.8f, 1.1f, 0.8f);
 }
 
+// enable alpha test optimization to discard transparent pixels
+#define ENABLE_ALPHA_TEST
+
+// for debugging: disables blending so that we can see which parts are passing the alpha test
+//#define DONT_BLEND
+
 void goal_draw(struct s_rend *rend, float t)
 {
     glPushMatrix();
@@ -521,10 +527,25 @@ void goal_draw(struct s_rend *rend, float t)
 
         sol_draw(&beam.draw, rend, 1, 1);
 
+#ifdef DONT_BLEND
+        glDisable(GL_BLEND);
+#endif
+#ifdef ENABLE_ALPHA_TEST
+        glAlphaFunc(GL_GREATER, 0.0f);
+        glEnable(GL_ALPHA_TEST);
+#endif
+
         goal_part_draw(rend, t * 0.10f);
         goal_part_draw(rend, t * 0.10f);
         goal_part_draw(rend, t * 0.10f);
         goal_part_draw(rend, t * 0.10f);
+
+#ifdef DONT_BLEND
+        glEnable(GL_BLEND);
+#endif
+#ifdef ENABLE_ALPHA_TEST
+        glDisable(GL_ALPHA_TEST);
+#endif
 
         glMatrixMode(GL_TEXTURE);
         glLoadIdentity();
@@ -550,9 +571,24 @@ void jump_draw(struct s_rend *rend, float t, int h)
 
         sol_draw(&beam.draw, rend, 1, 1);
 
+#ifdef DONT_BLEND
+        glDisable(GL_BLEND);
+#endif
+#ifdef ENABLE_ALPHA_TEST
+        glAlphaFunc(GL_GREATER, 0.0f);
+        glEnable(GL_ALPHA_TEST);
+#endif
+
         jump_part_draw(rend, t * 0.15f, t * 360.0f);
         jump_part_draw(rend, t * 0.20f, t * 360.0f);
         jump_part_draw(rend, t * 0.25f, t * 360.0f);
+
+#ifdef DONT_BLEND
+        glEnable(GL_BLEND);
+#endif
+#ifdef ENABLE_ALPHA_TEST
+        glDisable(GL_ALPHA_TEST);
+#endif
 
         glMatrixMode(GL_TEXTURE);
         glLoadIdentity();
