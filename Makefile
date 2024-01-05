@@ -17,6 +17,10 @@ ifeq ($(shell uname), Darwin)
 	PLATFORM := darwin
 endif
 
+ifeq ($(shell uname -o),Msys)
+	PLATFORM := mingw
+endif
+
 #------------------------------------------------------------------------------
 # Paths (packagers might want to set DATADIR and LOCALEDIR)
 
@@ -131,9 +135,11 @@ ALL_CPPFLAGS += $(HMD_CPPFLAGS)
 SDL_LIBS := $(shell sdl2-config --libs)
 PNG_LIBS := $(shell libpng-config --libs)
 
+ENABLE_FS := stdio
 ifeq ($(ENABLE_FS),stdio)
 FS_LIBS :=
-else
+endif
+ifeq ($(ENABLE_FS),physfs)
 FS_LIBS := -lphysfs
 endif
 
@@ -202,12 +208,12 @@ endif
 #------------------------------------------------------------------------------
 
 ifeq ($(PLATFORM),mingw)
-	EXT := .exe
+X := .exe
 endif
 
-MAPC_TARG := mapc$(EXT)
-BALL_TARG := neverball$(EXT)
-PUTT_TARG := neverputt$(EXT)
+MAPC_TARG := mapc$(X)
+BALL_TARG := neverball$(X)
+PUTT_TARG := neverputt$(X)
 
 ifeq ($(PLATFORM),mingw)
 	MAPC := $(WINE) ./$(MAPC_TARG)
@@ -267,7 +273,6 @@ BALL_OBJS := \
 	share/fs_common.o   \
 	share/fs_png.o      \
 	share/fs_jpg.o      \
-	share/fs_rwops.o    \
 	share/fs_ov.o       \
 	share/log.o         \
 	ball/hud.o          \
@@ -331,7 +336,6 @@ PUTT_OBJS := \
 	share/fs_common.o   \
 	share/fs_png.o      \
 	share/fs_jpg.o      \
-	share/fs_rwops.o    \
 	share/fs_ov.o       \
 	share/dir.o         \
 	share/fbo.o         \
@@ -353,7 +357,8 @@ ifeq ($(ENABLE_FS),stdio)
 BALL_OBJS += share/fs_stdio.o
 PUTT_OBJS += share/fs_stdio.o
 MAPC_OBJS += share/fs_stdio.o
-else
+endif
+ifeq ($(ENABLE_FS),physfs)
 BALL_OBJS += share/fs_physfs.o
 PUTT_OBJS += share/fs_physfs.o
 MAPC_OBJS += share/fs_physfs.o
@@ -470,87 +475,10 @@ clean : clean-src
 	$(RM) $(DESKTOPS)
 	$(MAKE) -C po clean
 
-test : all
-	./neverball
-
-TAGS :
-	$(RM) $@
-	find . -name '*.[ch]' | xargs etags -a
-
 #------------------------------------------------------------------------------
 
-.PHONY : all sols locales clean-src clean test TAGS
+.PHONY : all sols locales desktops clean-src clean
 
 -include $(BALL_DEPS) $(PUTT_DEPS) $(MAPC_DEPS)
-
-#------------------------------------------------------------------------------
-
-ifeq ($(PLATFORM),mingw)
-
-#------------------------------------------------------------------------------
-
-INSTALLER := ../neverball-$(VERSION)-setup.exe
-
-MAKENSIS := makensis
-MAKENSIS_FLAGS := -DVERSION=$(VERSION) -DOUTFILE=$(INSTALLER)
-
-TODOS   := todos
-FROMDOS := fromdos
-
-CP := cp
-
-TEXT_DOCS := \
-	doc/AUTHORS \
-	doc/MANUAL  \
-	CHANGES     \
-	COPYING     \
-	README
-
-TXT_DOCS := $(TEXT_DOCS:%=%.txt)
-
-#------------------------------------------------------------------------------
-
-.PHONY: setup
-setup: $(INSTALLER)
-
-$(INSTALLER): install-dlls convert-text-files all contrib
-	$(MAKENSIS) $(MAKENSIS_FLAGS) -nocd scripts/neverball.nsi
-
-$(INSTALLER): LDFLAGS := -s $(LDFLAGS)
-
-.PHONY: clean-setup
-clean-setup: clean
-	$(RM) install-dlls.sh *.dll $(TXT_DOCS)
-	find data -name "*.txt" -exec $(FROMDOS) {} \;
-	$(MAKE) -C contrib EXT=$(EXT) clean
-
-#------------------------------------------------------------------------------
-
-.PHONY: install-dlls
-install-dlls: install-dlls.sh
-	sh $<
-
-install-dlls.sh: $(MAPC_TARG) $(BALL_TARG) $(PUTT_TARG)
-	mingw-list-dlls --format=shell $^ > $@
-
-#------------------------------------------------------------------------------
-
-.PHONY: convert-text-files
-convert-text-files: $(TXT_DOCS)
-	find data -name "*.txt" -exec $(TODOS) {} \;
-
-%.txt: %
-	$(CP) $< $@
-	$(TODOS) $@
-
-#------------------------------------------------------------------------------
-
-.PHONY: contrib
-contrib:
-	$(MAKE) -C contrib EXT=$(EXT)
-
-#------------------------------------------------------------------------------
-
-endif
 
 #------------------------------------------------------------------------------
