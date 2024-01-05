@@ -69,7 +69,12 @@ static void gui_level(int id, int i)
     jd = gui_label(id, level_name(l), GUI_SML, back, fore);
 
     if (level_opened(l) || config_cheat())
+    {
         gui_set_state(jd, START_LEVEL, i);
+
+        if (i == 0)
+            gui_focus(jd);
+    }
 }
 
 static void start_over_level(int i)
@@ -171,7 +176,7 @@ static int start_gui(void)
 
             gui_label(jd, set_name(curr_set()), GUI_SML, gui_yel, gui_red);
             gui_filler(jd);
-            gui_start(jd, _("Back"),  GUI_SML, GUI_BACK, 0);
+            gui_state(jd, _("Back"),  GUI_SML, GUI_BACK, 0);
         }
 
         gui_space(id);
@@ -182,15 +187,21 @@ static int start_gui(void)
             {
                 if ((kd = gui_vstack(jd)))
                 {
+                    const int ww = MIN(w, h) / 2;
+                    const int hh = ww / 4 * 3;
+
                     shot_id = gui_image(kd, set_shot(curr_set()),
-                                        6 * w / 16, 6 * h / 16);
+                                        ww, hh);
                     file_id = gui_label(kd, " ", GUI_SML, gui_yel, gui_red);
                 }
             }
             else
             {
+                const int ww = MIN(w, h) * 7 / 12;
+                const int hh = ww / 4 * 3;
+
                 shot_id = gui_image(jd, set_shot(curr_set()),
-                                    7 * w / 16, 7 * h / 16);
+                                    ww, hh);
             }
 
             if ((kd = gui_varray(jd)))
@@ -214,8 +225,6 @@ static int start_gui(void)
 
         if ((jd = gui_hstack(id)))
         {
-            gui_filler(jd);
-
             if ((kd = gui_harray(jd)))
             {
                 int btn0, btn1;
@@ -231,9 +240,10 @@ static int start_gui(void)
 
             gui_space(jd);
 
-            gui_label(jd, _("Goal State in Completed Levels"), GUI_SML, 0, 0);
+            kd = gui_label(jd, _("Goal State in Completed Levels"), GUI_SML, 0, 0);
 
-            gui_filler(jd);
+            gui_set_trunc(kd, TRUNC_TAIL);
+            gui_set_fill(kd);
         }
 
         gui_layout(id, 0, 0);

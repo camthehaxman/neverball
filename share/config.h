@@ -55,7 +55,6 @@ extern int CONFIG_FPS;
 extern int CONFIG_SOUND_VOLUME;
 extern int CONFIG_MUSIC_VOLUME;
 extern int CONFIG_JOYSTICK;
-extern int CONFIG_JOYSTICK_DEVICE;
 extern int CONFIG_JOYSTICK_RESPONSE;
 extern int CONFIG_JOYSTICK_AXIS_X0;
 extern int CONFIG_JOYSTICK_AXIS_Y0;
@@ -74,11 +73,19 @@ extern int CONFIG_JOYSTICK_BUTTON_L1;
 extern int CONFIG_JOYSTICK_BUTTON_R1;
 extern int CONFIG_JOYSTICK_BUTTON_L2;
 extern int CONFIG_JOYSTICK_BUTTON_R2;
+extern int CONFIG_JOYSTICK_BUTTON_SELECT;
 extern int CONFIG_JOYSTICK_BUTTON_START;
 extern int CONFIG_JOYSTICK_DPAD_L;
 extern int CONFIG_JOYSTICK_DPAD_R;
 extern int CONFIG_JOYSTICK_DPAD_U;
 extern int CONFIG_JOYSTICK_DPAD_D;
+
+extern int CONFIG_WIIMOTE_INVERT_PITCH;
+extern int CONFIG_WIIMOTE_INVERT_ROLL;
+extern int CONFIG_WIIMOTE_PITCH_SENSITIVITY;
+extern int CONFIG_WIIMOTE_ROLL_SENSITIVITY;
+extern int CONFIG_WIIMOTE_SMOOTH_ALPHA;
+extern int CONFIG_WIIMOTE_HOLD_SIDEWAYS;
 
 extern int CONFIG_KEY_CAMERA_1;
 extern int CONFIG_KEY_CAMERA_2;
@@ -107,6 +114,8 @@ extern int CONFIG_CAMERA_1_SPEED;
 extern int CONFIG_CAMERA_2_SPEED;
 extern int CONFIG_CAMERA_3_SPEED;
 
+extern int CONFIG_TOUCH_ROTATE;
+
 /* String options. */
 
 extern int CONFIG_PLAYER;
@@ -119,6 +128,7 @@ extern int CONFIG_THEME;
 /*---------------------------------------------------------------------------*/
 
 void config_init(void);
+void config_quit(void);
 void config_load(void);
 void config_save(void);
 
@@ -131,6 +141,8 @@ int  config_get_d(int);
 
 void        config_set_s(int, const char *);
 const char *config_get_s(int);
+
+void config_set(const char *key, const char *val);
 
 /*---------------------------------------------------------------------------*/
 
@@ -155,6 +167,7 @@ int config_screenshot(void);
 
 #define KEY_FPS        SDLK_F9
 #define KEY_POSE       SDLK_F10
+#define KEY_FULLSCREEN SDLK_F11
 #define KEY_SCREENSHOT SDLK_F12
 
 #endif

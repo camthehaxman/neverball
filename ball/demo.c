@@ -12,6 +12,10 @@
  * General Public License for more details.
  */
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -313,6 +317,16 @@ void demo_play_stat(int status, int coins, int timer)
     }
 }
 
+static void demo_refresh(void)
+{
+#ifdef __EMSCRIPTEN__
+    EM_ASM({
+        Neverball.refreshReplays();
+    });
+#endif
+    return;
+}
+
 void demo_play_stop(int d)
 {
     if (demo_fp)
@@ -321,6 +335,9 @@ void demo_play_stop(int d)
         demo_fp = NULL;
 
         if (d) fs_remove(demo_play.path);
+
+        fs_persistent_sync();
+        demo_refresh();
     }
 }
 
@@ -338,7 +355,11 @@ void demo_rename(const char *name)
         SAFECPY(path, demo_path(name));
 
         if (strcmp(demo_play.name, name) != 0 && fs_exists(demo_play.path))
+        {
             fs_rename(demo_play.path, path);
+            fs_persistent_sync();
+            demo_refresh();
+        }
     }
 }
 
@@ -463,6 +484,9 @@ void demo_replay_stop(int d)
         demo_fp = NULL;
 
         if (d) fs_remove(demo_replay.path);
+
+        fs_persistent_sync();
+        demo_refresh();
     }
 }
 

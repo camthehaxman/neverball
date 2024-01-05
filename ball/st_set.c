@@ -74,11 +74,9 @@ static int set_action(int tok, int val)
         break;
 
     case SET_SELECT:
-        if (set_exists(val))
-        {
-            set_goto(val);
-            return goto_state(&st_start);
-        }
+        set_goto(val);
+        return goto_state(&st_start);
+        break;
     }
 
     return 1;
@@ -87,7 +85,17 @@ static int set_action(int tok, int val)
 static void gui_set(int id, int i)
 {
     if (set_exists(i))
-        gui_state(id, set_name(i), GUI_SML, SET_SELECT, i);
+    {
+        int name_id;
+
+        if (i % SET_STEP == 0)
+            name_id = gui_start(id, "IJKLMNOPQRSTUVWXYZ", GUI_SML, SET_SELECT, i);
+        else
+            name_id = gui_state(id, "IJKLMNOPQRSTUVWXYZ", GUI_SML, SET_SELECT, i);
+
+        gui_set_trunc(name_id, TRUNC_TAIL);
+        gui_set_label(name_id, set_name(i));
+    }
     else
         gui_label(id, "", GUI_SML, 0, 0);
 }
@@ -114,7 +122,10 @@ static int set_gui(void)
 
         if ((jd = gui_harray(id)))
         {
-            shot_id = gui_image(jd, set_shot(first), 7 * w / 16, 7 * h / 16);
+            const int ww = MIN(w, h) * 7 / 12;
+            const int hh = ww / 4 * 3;
+
+            shot_id = gui_image(jd, set_shot(first), ww, hh);
 
             if ((kd = gui_varray(jd)))
             {
@@ -124,7 +135,7 @@ static int set_gui(void)
         }
 
         gui_space(id);
-        desc_id = gui_multi(id, " \\ \\ \\ \\ \\", GUI_SML, gui_yel, gui_wht);
+        desc_id = gui_multi(id, " \n \n \n \n \n", GUI_SML, gui_yel, gui_wht);
 
         gui_layout(id, 0, 0);
     }
@@ -145,6 +156,11 @@ static int set_enter(struct state *st, struct state *prev)
     else do_init = 1;
 
     return set_gui();
+}
+
+static void set_leave(struct state *st, struct state *next, int id)
+{
+    gui_delete(id);
 }
 
 static void set_over(int i)
@@ -189,6 +205,10 @@ static int set_buttn(int b, int d)
             return set_action(gui_token(active), gui_value(active));
         if (config_tst_d(CONFIG_JOYSTICK_BUTTON_B, b))
             return set_action(GUI_BACK, 0);
+        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_L1, b) && first > 0)
+            return set_action(GUI_PREV, 0);
+        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_R1, b) && first + SET_STEP < total)
+            return set_action(GUI_NEXT, 0);
     }
     return 1;
 }
@@ -197,7 +217,7 @@ static int set_buttn(int b, int d)
 
 struct state st_set = {
     set_enter,
-    shared_leave,
+    set_leave,
     shared_paint,
     shared_timer,
     set_point,

@@ -81,10 +81,26 @@ int read_line(char **dst, fs_file fin)
 
 char *strip_newline(char *str)
 {
-    char *c = str + strlen(str) - 1;
+    if (str && *str)
+    {
+        char *p = str + strlen(str) - 1;
 
-    while (c >= str && (*c == '\n' || *c =='\r'))
-        *c-- = '\0';
+        while (p >= str && (*p == '\n' || *p =='\r'))
+            *p-- = '\0';
+    }
+
+    return str;
+}
+
+char *strip_spaces(char *str)
+{
+    if (str && *str)
+    {
+        char *p = str + strlen(str) - 1;
+
+        while (p >= str && isspace(*p))
+            *p-- = 0;
+    }
 
     return str;
 }
@@ -293,26 +309,48 @@ const char *base_name_sans(const char *name, const char *suffix)
 
 const char *base_name(const char *name)
 {
-    const char *sep;
-    return (name && (sep = path_last_sep(name))) ? sep + 1 : name;
-}
-
-const char *dir_name(const char *name)
-{
     static char buff[MAXSTR];
 
     char *sep;
 
+    if (!name) {
+        return name;
+    }
+
     SAFECPY(buff, name);
 
-    if ((sep = (char *) path_last_sep(buff)))
+    // Remove trailing slashes.
+    while ((sep = (char *) path_last_sep(buff)) && !sep[1]) {
+        *sep = 0;
+    }
+
+    return (sep = (char *) path_last_sep(buff)) ? sep + 1 : buff;
+}
+
+const char *dir_name(const char *name)
+{
+    if (name && *name)
     {
-        if (sep == buff)
-            return "/";
+        static char buff[MAXSTR];
 
-        *sep = '\0';
+        char *sep;
 
-        return buff;
+        SAFECPY(buff, name);
+
+        // Remove trailing slashes.
+        while ((sep = (char *) path_last_sep(buff)) && !sep[1]) {
+            *sep = 0;
+        }
+
+        if ((sep = (char *) path_last_sep(buff)))
+        {
+            if (sep == buff)
+                return "/";
+
+            *sep = '\0';
+
+            return buff;
+        }
     }
 
     return ".";

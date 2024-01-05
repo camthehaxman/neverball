@@ -45,14 +45,13 @@ static int pause_action(int tok, int val)
     switch (tok)
     {
     case PAUSE_CONTINUE:
-        SDL_PauseAudio(0);
+        audio_music_fade_in(1.0f);
         video_set_grab(0);
         return goto_state(st_continue);
 
     case PAUSE_RESTART:
         if (progress_same())
         {
-            SDL_PauseAudio(0);
             video_set_grab(1);
             return goto_state(&st_play_ready);
         }
@@ -61,9 +60,8 @@ static int pause_action(int tok, int val)
     case PAUSE_EXIT:
         progress_stat(GAME_NONE);
         progress_stop();
-        SDL_PauseAudio(0);
         audio_music_stop();
-        return goto_state(&st_exit);
+        return goto_exit();
     }
 
     return 1;
@@ -85,7 +83,7 @@ static int pause_gui(void)
 
         if ((jd = gui_harray(id)))
         {
-            gui_state(jd, _("Quit"), GUI_SML, PAUSE_EXIT, 0);
+            gui_state(jd, _("Give Up"), GUI_SML, PAUSE_EXIT, 0);
 
             if (progress_same_avail())
                 gui_state(jd, _("Restart"), GUI_SML, PAUSE_RESTART, 0);
@@ -105,7 +103,7 @@ static int pause_enter(struct state *st, struct state *prev)
     st_continue = prev;
 
     video_clr_grab();
-    SDL_PauseAudio(1);
+    audio_music_fade_out(1.0f);
 
     hud_update(0);
 

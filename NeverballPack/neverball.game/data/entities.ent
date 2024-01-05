@@ -64,6 +64,21 @@ Defines a shrink coin.
 </point>
 
 
+<list name="clock">
+  <item name="None" value="0"/>
+  <item name="Small" value="5"/>
+  <item name="Medium" value="15"/>
+  <item name="Large" value="30"/>
+</list>
+
+<point name="item_clock" color="0.5 0.25 1" box="-16 -16 -16 16 16 16">
+Defines a clock, adding time to a level.
+
+Attributes:
+* <clock key="light" name="Preset bonus" value="0">Value of the clock.  Pink clock (small) = 5, turquoise clock (medium) = 15, orange clock (large) = 30.</clock>
+</point>
+
+
 <list name="coin">
   <item name="Yellow" value="1"/>
   <item name="Red" value="5"/>
@@ -86,6 +101,7 @@ misc_model entities define visible geometry, but not physical geometry.  So, if 
 Attributes:
 * <model key="model" name="Model">Path to the model file.  The model must be in OBJ format.  It must have triangular tessellation.  All vertices must have normals and texture coordinates.</model>
 * <target key="target" name="Target">Can be used to attach the misc_model to a path_corner to create moving detail geometry.</target>
+* <target key="target2" name="Target (orientation)">Can optionally be used to attach the misc_model to a second path_corner that controls the orientation of the moving detail geometry. This is useful when you want to control the position and orientation independently of each other.</target>
 </point>
 
 

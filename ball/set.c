@@ -23,6 +23,7 @@
 #include "set.h"
 #include "common.h"
 #include "fs.h"
+#include "log.h"
 
 #include "game_server.h"
 #include "game_client.h"
@@ -309,14 +310,26 @@ static int set_load(struct set *s, const char *filename)
 
         while (s->count < MAXLVL && read_line(&level_name, fin))
         {
-            s->level_name_v[s->count] = level_name;
-            s->count++;
+            strip_spaces(level_name);
+
+            if (*level_name)
+            {
+                s->level_name_v[s->count] = level_name;
+                s->count++;
+            }
+            else
+            {
+                free(level_name);
+                level_name = NULL;
+            }
         }
 
         fs_close(fin);
 
         return 1;
     }
+
+    log_printf("Failure to load set file %s\n", filename);
 
     free(s->name);
     free(s->desc);
@@ -354,13 +367,7 @@ static int cmp_dir_items(const void *A, const void *B)
 
 static int set_is_loaded(const char *path)
 {
-    int i;
-
-    for (i = 0; i < array_len(sets); i++)
-        if (strcmp(SET_GET(sets, i)->file, path) == 0)
-            return 1;
-
-    return 0;
+    return (set_find(path) >= 0);
 }
 
 static int is_unseen_set(struct dir_item *item)
@@ -370,7 +377,7 @@ static int is_unseen_set(struct dir_item *item)
             !set_is_loaded(item->path));
 }
 
-int set_init()
+int set_init(void)
 {
     fs_file fin;
     char *name;
@@ -427,13 +434,16 @@ int set_init()
 
 void set_quit(void)
 {
-    int i;
+    if (sets)
+    {
+        int i, n = array_len(sets);
 
-    for (i = 0; i < array_len(sets); i++)
-        set_free(array_get(sets, i));
+        for (i = 0; i < n; i++)
+            set_free(array_get(sets, i));
 
-    array_free(sets);
-    sets = NULL;
+        array_free(sets);
+        sets = NULL;
+    }
 }
 
 /*---------------------------------------------------------------------------*/
@@ -441,6 +451,11 @@ void set_quit(void)
 int set_exists(int i)
 {
     return sets ? 0 <= i && i < array_len(sets) : 0;
+}
+
+const char *set_file(int i)
+{
+    return set_exists(i) ? SET_GET(sets, i)->file : NULL;
 }
 
 const char *set_id(int i)
@@ -499,9 +514,15 @@ static void set_load_levels(void)
         l->number = i;
 
         if (l->is_bonus)
-            SAFECPY(l->name, roman[bonus++]);
+        {
+            SAFECPY(l->name, roman[bonus]);
+            bonus++;
+        }
         else
-            sprintf(l->name, "%02d", regular++);
+        {
+            sprintf(l->name, "%02d", regular);
+            regular++;
+        }
 
         l->is_locked = (i > 0);
         l->is_completed = 0;
@@ -517,6 +538,20 @@ void set_goto(int i)
 
     set_load_levels();
     set_load_hs();
+}
+
+int set_find(const char *file)
+{
+    if (sets)
+    {
+        int i, n;
+
+        for (i = 0, n = array_len(sets); i < n; ++i)
+            if (strcmp(SET_GET(sets, i)->file, file) == 0)
+                return i;
+    }
+
+    return -1;
 }
 
 int curr_set(void)

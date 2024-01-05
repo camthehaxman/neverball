@@ -20,6 +20,7 @@
 #include "common.h"
 #include "image.h"
 #include "lang.h"
+#include "log.h"
 
 /*
  * Material cache.
@@ -104,7 +105,7 @@ static void load_mtrl_objects(struct mtrl *mp)
 {
     /* Make sure not to leak an already loaded object. */
 
-    if (mp->o)
+    if (mp->o || !mp->base.f[0])
         return;
 
     /* Load the texture. */
@@ -123,6 +124,8 @@ static void load_mtrl_objects(struct mtrl *mp)
         else
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     }
+    else
+        log_printf("Failed to load texture \"%s\"\n", _(mp->base.f));
 }
 
 /*
@@ -153,7 +156,7 @@ static void load_mtrl(struct mtrl *mp, const struct b_mtrl *base)
     mp->a = touint(base->a);
     mp->s = touint(base->s);
     mp->e = touint(base->e);
-    mp->h = tobyte(base->h[0]);
+    mp->h = toushort(base->h[0]);
 
     /* Load GL resources. */
 

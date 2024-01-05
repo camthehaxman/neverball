@@ -17,7 +17,6 @@
 
 #include "log.h"
 #include "common.h"
-#include "version.h"
 #include "fs.h"
 
 static char    log_header[MAXSTR];
@@ -43,6 +42,7 @@ void log_printf(const char *fmt, ...)
         va_end(ap);
 
         fputs(str, stderr);
+        fflush(stderr);
 
         if (log_fp)
         {
@@ -73,9 +73,9 @@ void log_init(const char *name, const char *path)
         {
             /* Printed on first message. */
 
-            sprintf(log_header, "%s - %s %s",
+            sprintf(log_header, "%s - %s",
                     date_to_str(time(NULL)),
-                    name, VERSION);
+                    name);
         }
         else
         {
@@ -89,6 +89,8 @@ void log_quit(void)
     if (log_fp)
     {
         fs_close(log_fp);
+        log_fp = NULL;
+
         log_header[0] = 0;
     }
 }

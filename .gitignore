@@ -1,4 +1,5 @@
 *.[od]
+*.bc
 *.sol
 *.desktop
 /locale
@@ -12,9 +13,21 @@
 
 *.bak
 *.autosave.map
+.vscode
+.DS_Store
 
 /neverball.exe
 /neverputt.exe
 /mapc.exe
 /contrib/curve.exe
 /*.dll
+
+/js/neverball.data
+/js/neverball.js
+/js/neverball.wasm
+/js/mapc.js
+/js/mapc.wasm
+/js/packages
+/*.zip
+
+/packages

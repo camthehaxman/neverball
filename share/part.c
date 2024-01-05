@@ -27,9 +27,8 @@
 #include "video.h"
 
 /*---------------------------------------------------------------------------*/
-/*
+
 #define PARTICLEVBO 1
-*/
 
 struct part_vary
 {
@@ -46,7 +45,9 @@ struct part_draw
 static struct part_vary coin_vary[PART_MAX_COIN];
 static struct part_draw coin_draw[PART_MAX_COIN];
 
+#ifdef PARTICLEVBO
 static GLuint coin_vbo;
+#endif
 
 /*---------------------------------------------------------------------------*/
 
@@ -67,7 +68,7 @@ static int coin_mtrl;
 
 static float rnd(float l, float h)
 {
-    return l + (h - l) * rand() / RAND_MAX;
+    return l + (h - l) * rand() / (float) RAND_MAX;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -157,7 +158,9 @@ void part_init(void)
 
 void part_free(void)
 {
+#ifdef PARTICLEVBO
     glDeleteBuffers_(1, &coin_vbo);
+#endif
 
     mtrl_free(coin_mtrl);
     coin_mtrl = 0;

@@ -35,11 +35,13 @@
 #include "gui.h"
 #include "hmd.h"
 #include "fs.h"
+#include "joy.h"
+#include "log.h"
 
 #include "st_conf.h"
 #include "st_all.h"
 
-const char TITLE[] = "Neverputt " VERSION;
+const char TITLE[] = "Neverputt";
 const char ICON[] = "icon/neverputt.png";
 
 /*---------------------------------------------------------------------------*/
@@ -147,6 +149,9 @@ static int loop(void)
             case KEY_WIREFRAME:
                 toggle_wire();
                 break;
+            case KEY_FULLSCREEN:
+                video_fullscreen(!config_get_d(CONFIG_FULLSCREEN));
+                break;
             case SDLK_RETURN:
             case SDLK_KP_ENTER:
                 d = st_buttn(config_get_d(CONFIG_JOYSTICK_BUTTON_A), 1);
@@ -215,19 +220,32 @@ static int loop(void)
                 if (config_get_d(CONFIG_DISPLAY) != video_display())
                     config_set_d(CONFIG_DISPLAY, video_display());
                 break;
+
+            case SDL_WINDOWEVENT_SIZE_CHANGED:
+                video_resize(e.window.data1, e.window.data2);
+                gui_resize();
+                break;
             }
             break;
 
         case SDL_JOYAXISMOTION:
-            st_stick(e.jaxis.axis, JOY_VALUE(e.jaxis.value));
+            joy_axis(e.jaxis.which, e.jaxis.axis, JOY_VALUE(e.jaxis.value));
             break;
 
         case SDL_JOYBUTTONDOWN:
-            d = st_buttn(e.jbutton.button, 1);
+            d = joy_button(e.jbutton.which, e.jbutton.button, 1);
             break;
 
         case SDL_JOYBUTTONUP:
-            d = st_buttn(e.jbutton.button, 0);
+            d = joy_button(e.jbutton.which, e.jbutton.button, 0);
+            break;
+
+        case SDL_JOYDEVICEADDED:
+            joy_add(e.jdevice.which);
+            break;
+
+        case SDL_JOYDEVICEREMOVED:
+            joy_remove(e.jdevice.which);
             break;
         }
     }
@@ -279,9 +297,8 @@ static void opt_parse(int argc, char **argv)
 int main(int argc, char *argv[])
 {
     int camera = 0;
-    SDL_Joystick *joy = NULL;
 
-    if (!fs_init(argv[0]))
+    if (!fs_init(argc > 0 ? argv[0] : NULL))
     {
         fprintf(stderr, "Failure to initialize virtual file system (%s)\n",
                 fs_error());
@@ -293,11 +310,13 @@ int main(int argc, char *argv[])
     opt_parse(argc, argv);
 
     config_paths(opt_data);
-    log_init("Neverputt", "neverputt.log");
+    log_init("Neverputt" VERSION, "neverputt.log");
     fs_mkdir("Screenshots");
 
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK) == 0)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == 0)
     {
+        joy_init();
+
         config_init();
         config_load();
 
@@ -308,18 +327,6 @@ int main(int argc, char *argv[])
         /* Cache Neverball's camera setting. */
 
         camera = config_get_d(CONFIG_CAMERA);
-
-        /* Initialize the joystick. */
-
-        if (config_get_d(CONFIG_JOYSTICK) && SDL_NumJoysticks() > 0)
-        {
-            joy = SDL_JoystickOpen(config_get_d(CONFIG_JOYSTICK_DEVICE));
-            if (joy)
-            {
-                SDL_JoystickEventState(SDL_ENABLE);
-                set_joystick(joy);
-            }
-        }
 
         /* Initialize the audio. */
 
@@ -384,6 +391,8 @@ int main(int argc, char *argv[])
 
         config_set_d(CONFIG_CAMERA, camera);
         config_save();
+
+        joy_quit();
 
         SDL_Quit();
     }

@@ -10,6 +10,7 @@ const char *fs_error(void);
 
 const char *fs_base_dir(void);
 int         fs_add_path(const char *);
+void        fs_remove_path(const char *);
 int         fs_add_path_with_archives(const char *);
 int         fs_set_write_dir(const char *);
 const char *fs_get_write_dir(void);
@@ -23,8 +24,8 @@ fs_file fs_open_write(const char *);
 fs_file fs_open_append(const char *);
 int     fs_close(fs_file);
 
-int  fs_read(void *data, int size, int count, fs_file);
-int  fs_write(const void *data, int size, int count, fs_file);
+int  fs_read(void *data, int bytes, fs_file);
+int  fs_write(const void *data, int bytes, fs_file);
 int  fs_flush(fs_file);
 long fs_tell(fs_file);
 int  fs_seek(fs_file, long offset, int whence);
@@ -51,5 +52,7 @@ Array fs_dir_scan(const char *, int (*filter)(struct dir_item *));
 void  fs_dir_free(Array);
 
 const char *fs_resolve(const char *);
+
+void fs_persistent_sync(void);
 
 #endif

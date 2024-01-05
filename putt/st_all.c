@@ -30,15 +30,6 @@
 
 /*---------------------------------------------------------------------------*/
 
-static SDL_Joystick *joystick = NULL;
-
-void set_joystick(SDL_Joystick *j)
-{
-    joystick = j;
-}
-
-/*---------------------------------------------------------------------------*/
-
 static char *number(int i)
 {
     static char str[MAXSTR];
@@ -72,12 +63,12 @@ static int score_card(const char  *title,
         {
             if ((kd = gui_varray(jd)))
             {
-                if (p1) gui_label(kd, _("O"),      0, 0, 0);
-                if (p1) gui_label(kd, hole_out(0), 0, gui_wht, gui_wht);
-                if (p1) gui_label(kd, hole_out(1), 0, gui_red, gui_wht);
-                if (p2) gui_label(kd, hole_out(2), 0, gui_grn, gui_wht);
-                if (p3) gui_label(kd, hole_out(3), 0, gui_blu, gui_wht);
-                if (p4) gui_label(kd, hole_out(4), 0, gui_yel, gui_wht);
+                if (p1) gui_label(kd, _("O"),      GUI_SML, 0, 0);
+                if (p1) gui_label(kd, hole_out(0), GUI_SML, gui_wht, gui_wht);
+                if (p1) gui_label(kd, hole_out(1), GUI_SML, gui_red, gui_wht);
+                if (p2) gui_label(kd, hole_out(2), GUI_SML, gui_grn, gui_wht);
+                if (p3) gui_label(kd, hole_out(3), GUI_SML, gui_blu, gui_wht);
+                if (p4) gui_label(kd, hole_out(4), GUI_SML, gui_yel, gui_wht);
 
                 gui_set_rect(kd, GUI_RGT);
             }
@@ -87,12 +78,12 @@ static int score_card(const char  *title,
                 for (i = m; i > 0; i--)
                     if ((ld = gui_varray(kd)))
                     {
-                        if (p1) gui_label(ld, number(i), 0, 0, 0);
-                        if (p1) gui_label(ld, hole_score(i, 0), 0, gui_wht, gui_wht);
-                        if (p1) gui_label(ld, hole_score(i, 1), 0, gui_red, gui_wht);
-                        if (p2) gui_label(ld, hole_score(i, 2), 0, gui_grn, gui_wht);
-                        if (p3) gui_label(ld, hole_score(i, 3), 0, gui_blu, gui_wht);
-                        if (p4) gui_label(ld, hole_score(i, 4), 0, gui_yel, gui_wht);
+                        if (p1) gui_label(ld, number(i), GUI_SML, 0, 0);
+                        if (p1) gui_label(ld, hole_score(i, 0), GUI_SML, gui_wht, gui_wht);
+                        if (p1) gui_label(ld, hole_score(i, 1), GUI_SML, gui_red, gui_wht);
+                        if (p2) gui_label(ld, hole_score(i, 2), GUI_SML, gui_grn, gui_wht);
+                        if (p3) gui_label(ld, hole_score(i, 3), GUI_SML, gui_blu, gui_wht);
+                        if (p4) gui_label(ld, hole_score(i, 4), GUI_SML, gui_yel, gui_wht);
                     }
 
                 gui_set_rect(kd, GUI_LFT);
@@ -104,11 +95,11 @@ static int score_card(const char  *title,
 
                 if ((ld = gui_varray(kd)))
                 {
-                    if (p1) gui_label(ld, _("Par"), 0, gui_wht, gui_wht);
-                    if (p1) gui_label(ld, _("P1"),  0, gui_red, gui_wht);
-                    if (p2) gui_label(ld, _("P2"),  0, gui_grn, gui_wht);
-                    if (p3) gui_label(ld, _("P3"),  0, gui_blu, gui_wht);
-                    if (p4) gui_label(ld, _("P4"),  0, gui_yel, gui_wht);
+                    if (p1) gui_label(ld, _("Par"), GUI_SML, gui_wht, gui_wht);
+                    if (p1) gui_label(ld, _("P1"),  GUI_SML, gui_red, gui_wht);
+                    if (p2) gui_label(ld, _("P2"),  GUI_SML, gui_grn, gui_wht);
+                    if (p3) gui_label(ld, _("P3"),  GUI_SML, gui_blu, gui_wht);
+                    if (p4) gui_label(ld, _("P4"),  GUI_SML, gui_yel, gui_wht);
 
                     gui_set_rect(ld, GUI_ALL);
                 }
@@ -121,24 +112,24 @@ static int score_card(const char  *title,
         {
             if ((kd = gui_varray(jd)))
             {
-                if (p1) gui_label(kd, _("Tot"),    0, 0, 0);
-                if (p1) gui_label(kd, hole_tot(0), 0, gui_wht, gui_wht);
-                if (p1) gui_label(kd, hole_tot(1), 0, gui_red, gui_wht);
-                if (p2) gui_label(kd, hole_tot(2), 0, gui_grn, gui_wht);
-                if (p3) gui_label(kd, hole_tot(3), 0, gui_blu, gui_wht);
-                if (p4) gui_label(kd, hole_tot(4), 0, gui_yel, gui_wht);
+                if (p1) gui_label(kd, _("Tot"),    GUI_SML, 0, 0);
+                if (p1) gui_label(kd, hole_tot(0), GUI_SML, gui_wht, gui_wht);
+                if (p1) gui_label(kd, hole_tot(1), GUI_SML, gui_red, gui_wht);
+                if (p2) gui_label(kd, hole_tot(2), GUI_SML, gui_grn, gui_wht);
+                if (p3) gui_label(kd, hole_tot(3), GUI_SML, gui_blu, gui_wht);
+                if (p4) gui_label(kd, hole_tot(4), GUI_SML, gui_yel, gui_wht);
 
                 gui_set_rect(kd, GUI_ALL);
             }
 
             if ((kd = gui_varray(jd)))
             {
-                if (p1) gui_label(kd, _("I"),     0, 0, 0);
-                if (p1) gui_label(kd, hole_in(0), 0, gui_wht, gui_wht);
-                if (p1) gui_label(kd, hole_in(1), 0, gui_red, gui_wht);
-                if (p2) gui_label(kd, hole_in(2), 0, gui_grn, gui_wht);
-                if (p3) gui_label(kd, hole_in(3), 0, gui_blu, gui_wht);
-                if (p4) gui_label(kd, hole_in(4), 0, gui_yel, gui_wht);
+                if (p1) gui_label(kd, _("I"),     GUI_SML, 0, 0);
+                if (p1) gui_label(kd, hole_in(0), GUI_SML, gui_wht, gui_wht);
+                if (p1) gui_label(kd, hole_in(1), GUI_SML, gui_red, gui_wht);
+                if (p2) gui_label(kd, hole_in(2), GUI_SML, gui_grn, gui_wht);
+                if (p3) gui_label(kd, hole_in(3), GUI_SML, gui_blu, gui_wht);
+                if (p4) gui_label(kd, hole_in(4), GUI_SML, gui_yel, gui_wht);
 
                 gui_set_rect(kd, GUI_RGT);
             }
@@ -148,12 +139,12 @@ static int score_card(const char  *title,
                 for (i = n; i > m; i--)
                     if ((ld = gui_varray(kd)))
                     {
-                        if (p1) gui_label(ld, number(i), 0, 0, 0);
-                        if (p1) gui_label(ld, hole_score(i, 0), 0, gui_wht, gui_wht);
-                        if (p1) gui_label(ld, hole_score(i, 1), 0, gui_red, gui_wht);
-                        if (p2) gui_label(ld, hole_score(i, 2), 0, gui_grn, gui_wht);
-                        if (p3) gui_label(ld, hole_score(i, 3), 0, gui_blu, gui_wht);
-                        if (p4) gui_label(ld, hole_score(i, 4), 0, gui_yel, gui_wht);
+                        if (p1) gui_label(ld, number(i), GUI_SML, 0, 0);
+                        if (p1) gui_label(ld, hole_score(i, 0), GUI_SML, gui_wht, gui_wht);
+                        if (p1) gui_label(ld, hole_score(i, 1), GUI_SML, gui_red, gui_wht);
+                        if (p2) gui_label(ld, hole_score(i, 2), GUI_SML, gui_grn, gui_wht);
+                        if (p3) gui_label(ld, hole_score(i, 3), GUI_SML, gui_blu, gui_wht);
+                        if (p4) gui_label(ld, hole_score(i, 4), GUI_SML, gui_yel, gui_wht);
                     }
 
                 gui_set_rect(kd, GUI_LFT);
@@ -165,11 +156,11 @@ static int score_card(const char  *title,
 
                 if ((ld = gui_varray(kd)))
                 {
-                    if (p1) gui_label(ld, _("Par"), 0, gui_wht, gui_wht);
-                    if (p1) gui_label(ld, _("P1"),  0, gui_red, gui_wht);
-                    if (p2) gui_label(ld, _("P2"),  0, gui_grn, gui_wht);
-                    if (p3) gui_label(ld, _("P3"),  0, gui_blu, gui_wht);
-                    if (p4) gui_label(ld, _("P4"),  0, gui_yel, gui_wht);
+                    if (p1) gui_label(ld, _("Par"), GUI_SML, gui_wht, gui_wht);
+                    if (p1) gui_label(ld, _("P1"),  GUI_SML, gui_red, gui_wht);
+                    if (p2) gui_label(ld, _("P2"),  GUI_SML, gui_grn, gui_wht);
+                    if (p3) gui_label(ld, _("P3"),  GUI_SML, gui_blu, gui_wht);
+                    if (p4) gui_label(ld, _("P4"),  GUI_SML, gui_yel, gui_wht);
 
                     gui_set_rect(ld, GUI_ALL);
                 }
@@ -934,7 +925,8 @@ static int flyby_buttn(int b, int d)
 /*---------------------------------------------------------------------------*/
 
 static int stroke_rotate = 0;
-static int stroke_mag    = 0;
+static int stroke_rotate_alt = 0;
+static int stroke_mag = 0;
 
 static int stroke_enter(struct state *st, struct state *prev)
 {
@@ -970,9 +962,7 @@ static void stroke_timer(int id, float dt)
 
     float k;
 
-    if (SDL_GetModState() & KMOD_SHIFT ||
-        (joystick && SDL_JoystickGetButton(joystick,
-                                           config_get_d(CONFIG_JOYSTICK_BUTTON_X))))
+    if (SDL_GetModState() & KMOD_SHIFT || stroke_rotate_alt)
         k = 0.25;
     else
         k = 1.0;
@@ -1007,10 +997,17 @@ static int stroke_buttn(int b, int d)
 {
     if (d)
     {
+        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_X, b))
+            stroke_rotate_alt = 1;
         if (config_tst_d(CONFIG_JOYSTICK_BUTTON_A, b))
             return goto_state(&st_roll);
         if (config_tst_d(CONFIG_JOYSTICK_BUTTON_START, b))
             return goto_pause(&st_over);
+    }
+    else
+    {
+        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_X, b))
+            stroke_rotate_alt = 0;
     }
     return 1;
 }

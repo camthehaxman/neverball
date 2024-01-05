@@ -12,6 +12,10 @@
  * General Public License for more details.
  */
 
+#ifdef __EMSCRIPTEN__
+#include <gl4esinit.h>
+#endif
+
 #include <SDL.h>
 
 #include "video.h"
@@ -22,6 +26,7 @@
 #include "config.h"
 #include "gui.h"
 #include "hmd.h"
+#include "log.h"
 
 extern const char TITLE[];
 extern const char ICON[];
@@ -33,7 +38,7 @@ struct video video;
 /* Normally...... show the system cursor and hide the virtual cursor.        */
 /* In HMD mode... show the virtual cursor and hide the system cursor.        */
 
-void video_show_cursor()
+void video_show_cursor(void)
 {
     if (hmd_stat())
     {
@@ -50,7 +55,7 @@ void video_show_cursor()
 /* When the cursor is to be hidden, make sure neither the virtual cursor     */
 /* nor the system cursor is visible.                                         */
 
-void video_hide_cursor()
+void video_hide_cursor(void)
 {
     gui_set_cursor(0);
     SDL_ShowCursor(SDL_DISABLE);
@@ -110,6 +115,72 @@ static void set_window_icon(const char *filename)
     return;
 }
 
+/*
+ * Enter/exit fullscreen mode.
+ */
+int video_fullscreen(int f)
+{
+    int code = SDL_SetWindowFullscreen(window, f ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+
+    if (code == 0)
+        config_set_d(CONFIG_FULLSCREEN, f ? 1 : 0);
+    else
+        log_printf("Failure to %s fullscreen (%s)\n", f ? "enter"  : "exit", SDL_GetError());
+
+    return (code == 0);
+}
+
+/*
+ * Handle a window resize event.
+ */
+void video_resize(int window_w, int window_h)
+{
+    if (window)
+    {
+        /* Update window size (for mouse events). */
+
+        video.window_w = window_w;
+        video.window_h = window_h;
+
+        /* User experience thing: don't save fullscreen size to config. */
+
+        if (!config_get_d(CONFIG_FULLSCREEN))
+        {
+            config_set_d(CONFIG_WIDTH, video.window_w);
+            config_set_d(CONFIG_HEIGHT, video.window_h);
+        }
+
+        /* Update drawable size (for rendering). */
+
+        SDL_GL_GetDrawableSize(window, &video.device_w, &video.device_h);
+
+        video.device_scale = (float) video.device_h / (float) video.window_h;
+
+        /* Update viewport. */
+
+        glViewport(0, 0, video.device_w, video.device_h);
+    }
+}
+
+void video_set_window_size(int w, int h)
+{
+    /*
+     * On Emscripten, SDL_SetWindowSize does all of these:
+     *
+     *   1) updates SDL's cached window->w and window->h values
+     *   2) updates canvas.width and canvas.height (drawing buffer size)
+     *   3) triggers a SDL_WINDOWEVENT_SIZE_CHANGED event, which updates our viewport/UI.
+     */
+
+    /*
+     * BTW, for this to work with element.requestFullscreen(),
+     * a change needs to be applied to the SDL2 Emscripten port:
+     * https://github.com/emscripten-ports/SDL2/issues/138
+     */
+
+    SDL_SetWindowSize(window, w, h);
+}
+
 int video_display(void)
 {
     if (window)
@@ -131,6 +202,23 @@ int video_init(void)
     return 1;
 }
 
+void video_quit(void)
+{
+    if (context)
+    {
+        SDL_GL_DeleteContext(context);
+        context = NULL;
+    }
+
+    if (window)
+    {
+        SDL_DestroyWindow(window);
+        window = NULL;
+    }
+
+    hmd_free();
+}
+
 int video_mode(int f, int w, int h)
 {
     int stereo  = config_get_d(CONFIG_STEREO)      ? 1 : 0;
@@ -148,11 +236,7 @@ int video_mode(int f, int w, int h)
 
     hmd_free();
 
-    if (window)
-    {
-        SDL_GL_DeleteContext(context);
-        SDL_DestroyWindow(window);
-    }
+    video_quit();
 
 #if ENABLE_OPENGLES
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
@@ -181,13 +265,20 @@ int video_mode(int f, int w, int h)
     window = SDL_CreateWindow("", X, Y, w, h,
                               SDL_WINDOW_OPENGL |
                               (highdpi ? SDL_WINDOW_ALLOW_HIGHDPI : 0) |
-                              (f ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0));
+#ifndef __EMSCRIPTEN__
+                              (f ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0) |
+                              SDL_WINDOW_RESIZABLE |
+#endif
+			      0);
 
     if (window)
     {
         if ((context = SDL_GL_CreateContext(window)))
         {
             int buf, smp;
+#ifdef __EMSCRIPTEN__
+            initialize_gl4es();
+#endif
 
             SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &buf);
             SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &smp);
@@ -215,56 +306,16 @@ int video_mode(int f, int w, int h)
         set_window_title(TITLE);
         set_window_icon(ICON);
 
-        /*
-         * SDL_GetWindowSize can be unreliable when going fullscreen
-         * on OSX (and possibly elsewhere). We should really be
-         * waiting for a resize / size change event, but for now we're
-         * doing this lazy thing instead.
-         */
-
-        if (f)
-        {
-            SDL_DisplayMode dm;
-
-            if (SDL_GetDesktopDisplayMode(video_display(), &dm) == 0)
-            {
-                video.window_w = dm.w;
-                video.window_h = dm.h;
-            }
-        }
-        else
-        {
-            SDL_GetWindowSize(window, &video.window_w, &video.window_h);
-        }
-
-        if (highdpi)
-        {
-            SDL_GL_GetDrawableSize(window, &video.device_w, &video.device_h);
-        }
-        else
-        {
-            video.device_w = video.window_w;
-            video.device_h = video.window_h;
-        }
-
-        video.device_scale = (float) video.device_h / (float) video.window_h;
-
-        log_printf("Created a window (%u, %dx%d, %s)\n",
-                   SDL_GetWindowID(window),
-                   video.window_w, video.window_h,
-                   (f ? "fullscreen" : "windowed"));
-
         config_set_d(CONFIG_DISPLAY,    video_display());
         config_set_d(CONFIG_FULLSCREEN, f);
-        config_set_d(CONFIG_WIDTH,      video.window_w);
-        config_set_d(CONFIG_HEIGHT,     video.window_h);
 
         SDL_GL_SetSwapInterval(vsync);
 
         if (!glext_init())
             return 0;
 
-        glViewport(0, 0, video.device_w, video.device_h);
+        video_resize(w, h);
+
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 
         glEnable(GL_NORMALIZE);
@@ -407,7 +458,6 @@ static int grabbed = 0;
 
 void video_set_grab(int w)
 {
-#ifdef NDEBUG
     if (w)
     {
         SDL_EventState(SDL_MOUSEMOTION, SDL_IGNORE);
@@ -422,14 +472,12 @@ void video_set_grab(int w)
     SDL_SetRelativeMouseMode(SDL_TRUE);
     SDL_SetWindowGrab(window, SDL_TRUE);
     video_hide_cursor();
-#endif
 
     grabbed = 1;
 }
 
 void video_clr_grab(void)
 {
-#ifdef NDEBUG
     SDL_SetRelativeMouseMode(SDL_FALSE);
 
     /* Never release the grab in HMD mode. */
@@ -438,7 +486,6 @@ void video_clr_grab(void)
         SDL_SetWindowGrab(window, SDL_FALSE);
 
     video_show_cursor();
-#endif
     grabbed = 0;
 }
 

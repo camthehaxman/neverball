@@ -58,7 +58,6 @@ int CONFIG_FPS;
 int CONFIG_SOUND_VOLUME;
 int CONFIG_MUSIC_VOLUME;
 int CONFIG_JOYSTICK;
-int CONFIG_JOYSTICK_DEVICE;
 int CONFIG_JOYSTICK_RESPONSE;
 int CONFIG_JOYSTICK_AXIS_X0;
 int CONFIG_JOYSTICK_AXIS_Y0;
@@ -77,11 +76,19 @@ int CONFIG_JOYSTICK_BUTTON_L1;
 int CONFIG_JOYSTICK_BUTTON_R1;
 int CONFIG_JOYSTICK_BUTTON_L2;
 int CONFIG_JOYSTICK_BUTTON_R2;
+int CONFIG_JOYSTICK_BUTTON_SELECT;
 int CONFIG_JOYSTICK_BUTTON_START;
 int CONFIG_JOYSTICK_DPAD_L;
 int CONFIG_JOYSTICK_DPAD_R;
 int CONFIG_JOYSTICK_DPAD_U;
 int CONFIG_JOYSTICK_DPAD_D;
+
+int CONFIG_WIIMOTE_INVERT_PITCH;
+int CONFIG_WIIMOTE_INVERT_ROLL;
+int CONFIG_WIIMOTE_PITCH_SENSITIVITY;
+int CONFIG_WIIMOTE_ROLL_SENSITIVITY;
+int CONFIG_WIIMOTE_SMOOTH_ALPHA;
+int CONFIG_WIIMOTE_HOLD_SIDEWAYS;
 
 int CONFIG_KEY_CAMERA_1;
 int CONFIG_KEY_CAMERA_2;
@@ -110,6 +117,7 @@ int CONFIG_CAMERA_1_SPEED;
 int CONFIG_CAMERA_2_SPEED;
 int CONFIG_CAMERA_3_SPEED;
 
+int CONFIG_TOUCH_ROTATE;
 
 /* String options. */
 
@@ -163,12 +171,11 @@ static struct
     { &CONFIG_MUSIC_VOLUME, "music_volume", 6 },
 
     { &CONFIG_JOYSTICK,                "joystick",                1 },
-    { &CONFIG_JOYSTICK_DEVICE,         "joystick_device",         0 },
     { &CONFIG_JOYSTICK_RESPONSE,       "joystick_response",       250 },
     { &CONFIG_JOYSTICK_AXIS_X0,        "joystick_axis_x0",        0 },
     { &CONFIG_JOYSTICK_AXIS_Y0,        "joystick_axis_y0",        1 },
-    { &CONFIG_JOYSTICK_AXIS_X1,        "joystick_axis_x1",        2 },
-    { &CONFIG_JOYSTICK_AXIS_Y1,        "joystick_axis_y1",        3 },
+    { &CONFIG_JOYSTICK_AXIS_X1,        "joystick_axis_x1",        3 },
+    { &CONFIG_JOYSTICK_AXIS_Y1,        "joystick_axis_y1",        4 },
     { &CONFIG_JOYSTICK_AXIS_X0_INVERT, "joystick_axis_x0_invert", 0 },
     { &CONFIG_JOYSTICK_AXIS_Y0_INVERT, "joystick_axis_y0_invert", 0 },
     { &CONFIG_JOYSTICK_AXIS_X1_INVERT, "joystick_axis_x1_invert", 0 },
@@ -180,13 +187,21 @@ static struct
     { &CONFIG_JOYSTICK_BUTTON_Y,      "joystick_button_y",      3 },
     { &CONFIG_JOYSTICK_BUTTON_L1,     "joystick_button_l1",     4 },
     { &CONFIG_JOYSTICK_BUTTON_R1,     "joystick_button_r1",     5 },
-    { &CONFIG_JOYSTICK_BUTTON_L2,     "joystick_button_l2",     6 },
-    { &CONFIG_JOYSTICK_BUTTON_R2,     "joystick_button_r2",     7 },
-    { &CONFIG_JOYSTICK_BUTTON_START,  "joystick_button_start",  8 },
-    { &CONFIG_JOYSTICK_DPAD_L,        "joystick_dpad_l",       -1 },
-    { &CONFIG_JOYSTICK_DPAD_R,        "joystick_dpad_r",       -1 },
-    { &CONFIG_JOYSTICK_DPAD_U,        "joystick_dpad_u",       -1 },
-    { &CONFIG_JOYSTICK_DPAD_D,        "joystick_dpad_d",       -1 },
+    { &CONFIG_JOYSTICK_BUTTON_L2,     "joystick_button_l2",     -1 },
+    { &CONFIG_JOYSTICK_BUTTON_R2,     "joystick_button_r2",     -1 },
+    { &CONFIG_JOYSTICK_BUTTON_SELECT, "joystick_button_select", 6 },
+    { &CONFIG_JOYSTICK_BUTTON_START,  "joystick_button_start",  7 },
+    { &CONFIG_JOYSTICK_DPAD_L,        "joystick_dpad_l",        8 },
+    { &CONFIG_JOYSTICK_DPAD_R,        "joystick_dpad_r",        9 },
+    { &CONFIG_JOYSTICK_DPAD_U,        "joystick_dpad_u",       10 },
+    { &CONFIG_JOYSTICK_DPAD_D,        "joystick_dpad_d",       11 },
+
+    { &CONFIG_WIIMOTE_INVERT_PITCH,      "wiimote_invert_pitch"     , 0 },
+    { &CONFIG_WIIMOTE_INVERT_ROLL,       "wiimote_invert_roll"      , 0 },
+    { &CONFIG_WIIMOTE_PITCH_SENSITIVITY, "wiimote_pitch_sensitivity", 100 },
+    { &CONFIG_WIIMOTE_ROLL_SENSITIVITY,  "wiimote_roll_sensitivity" , 100 },
+    { &CONFIG_WIIMOTE_SMOOTH_ALPHA,      "wiimote_smooth_alpha"     , 50 },
+    { &CONFIG_WIIMOTE_HOLD_SIDEWAYS,     "wiimote_hold_sideways"    , 0 },
 
     { &CONFIG_KEY_CAMERA_1,      "key_camera_1",      SDLK_1 },
     { &CONFIG_KEY_CAMERA_2,      "key_camera_2",      SDLK_2 },
@@ -211,11 +226,13 @@ static struct
     { &CONFIG_CHEAT,       "cheat",       0 },
     { &CONFIG_STATS,       "stats",       0 },
     { &CONFIG_SCREENSHOT,  "screenshot",  0 },
-    { &CONFIG_LOCK_GOALS,  "lock_goals",  0 },
+    { &CONFIG_LOCK_GOALS,  "lock_goals",  1 },
 
     { &CONFIG_CAMERA_1_SPEED, "camera_1_speed", 250 },
     { &CONFIG_CAMERA_2_SPEED, "camera_2_speed", 0 },
     { &CONFIG_CAMERA_3_SPEED, "camera_3_speed", -1 },
+
+    { &CONFIG_TOUCH_ROTATE, "touch_rotate", 16 },
 };
 
 static struct
@@ -300,6 +317,17 @@ void config_init(void)
     {
         *option_s[i].sym = i;
         config_set_s(i, option_s[i].def);
+    }
+}
+
+void config_quit(void)
+{
+    int i;
+
+    for (i = 0; i < ARRAYSIZE(option_s); i++)
+    {
+        free(option_s[i].cur);
+        option_s[i].cur = NULL;
     }
 }
 
@@ -476,6 +504,8 @@ void config_save(void)
             fs_printf(fh, "%-25s %s\n", option_s[i].name, option_s[i].cur);
 
         fs_close(fh);
+
+        fs_persistent_sync();
     }
 
     dirty = 0;
@@ -520,6 +550,33 @@ void config_set_s(int i, const char *src)
 const char *config_get_s(int i)
 {
     return option_s[i].cur;
+}
+
+/*---------------------------------------------------------------------------*/
+
+/*
+ * Set an option from a string value.
+ *
+ * Works for both int and string options. Don't use this if you already have an int.
+ */
+void config_set(const char *key, const char *value)
+{
+    if (key && *key)
+    {
+        int i;
+
+        for (i = 0; i < ARRAYSIZE(option_s); ++i)
+        {
+            if (strcmp(option_s[i].name, key) == 0)
+                config_set_s(i, value);
+        }
+
+        for (i = 0; i < ARRAYSIZE(option_d); ++i)
+        {
+            if (strcmp(option_d[i].name, key) == 0)
+                config_set_d(i, atoi(value));
+        }
+    }
 }
 
 /*---------------------------------------------------------------------------*/

@@ -27,7 +27,8 @@ struct video
 
 extern struct video video;
 
-int video_init(void);
+int  video_init(void);
+void video_quit(void);
 
 /*---------------------------------------------------------------------------*/
 
@@ -44,7 +45,13 @@ void video_set_grab(int w);
 void video_clr_grab(void);
 int  video_get_grab(void);
 
-int  video_display();
+int  video_fullscreen(int);
+
+void video_resize(int, int);
+
+int  video_display(void);
+
+void video_set_window_size(int w, int h);
 
 /*---------------------------------------------------------------------------*/
 

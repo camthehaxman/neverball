@@ -22,7 +22,7 @@ struct gl_info gli;
 
 /*---------------------------------------------------------------------------*/
 
-#if !ENABLE_OPENGLES
+#if !ENABLE_OPENGLES && !defined(__EMSCRIPTEN__)
 
 PFNGLCLIENTACTIVETEXTURE_PROC    glClientActiveTexture_;
 PFNGLACTIVETEXTURE_PROC          glActiveTexture_;
@@ -74,7 +74,7 @@ int glext_check(const char *needle)
 
     /* Search for the given string in the OpenGL extension strings. */
 
-    for (haystack = glGetString(GL_EXTENSIONS); *haystack; haystack++)
+    for (haystack = glGetString(GL_EXTENSIONS); haystack && *haystack; haystack++)
     {
         for (c = (const GLubyte *) needle; *c && *haystack; c++, haystack++)
             if (*c != *haystack)
@@ -99,9 +99,11 @@ int glext_assert(const char *ext)
 
 /*---------------------------------------------------------------------------*/
 
-#define SDL_GL_GFPA(fun, str) do {       \
-    ptr = SDL_GL_GetProcAddress(str);    \
-    memcpy(&fun, &ptr, sizeof (void *)); \
+#define SDL_GL_GFPA(fun, str) do {                       \
+    ptr = SDL_GL_GetProcAddress(str);                    \
+    if (!ptr)                                            \
+        log_printf("Missing OpenGL function %s\n", str); \
+    memcpy(&fun, &ptr, sizeof (void *));                 \
 } while(0)
 
 /*---------------------------------------------------------------------------*/
@@ -138,7 +140,7 @@ int glext_init(void)
 
     /* Desktop init. */
 
-#if !ENABLE_OPENGLES
+#if !ENABLE_OPENGLES && !defined(__EMSCRIPTEN__)
     void *ptr = 0;
 
     if (glext_assert("ARB_multitexture"))

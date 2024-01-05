@@ -1,24 +1,27 @@
 
 #------------------------------------------------------------------------------
 
-BUILD := $(shell head -n1 .build 2> /dev/null || echo release)
+# Build: devel, release
+BUILD := $(shell cat neverball-build.txt 2> /dev/null || echo release)
 
-VERSION := 1.6.0
-VERSION := $(shell sh scripts/version.sh "$(BUILD)" "$(VERSION)" \
-	"share/version.in.h" "share/version.h" ".version")
+VERSION := $(shell sh scripts/version.sh)
 
 $(info Will make a "$(BUILD)" build of Neverball $(VERSION).)
 
 #------------------------------------------------------------------------------
 # Provide a target system hint for the Makefile.
-# Recognized PLATFORM values: darwin, mingw.
+# Recognized PLATFORM values: darwin, mingw, haiku.
 
 ifeq ($(shell uname), Darwin)
 	PLATFORM := darwin
 endif
 
-ifeq ($(shell uname -o),Msys)
+ifeq ($(shell uname -o 2> /dev/null),Msys)
 	PLATFORM := mingw
+endif
+
+ifeq ($(shell uname), Haiku)
+	PLATFORM := haiku
 endif
 
 #------------------------------------------------------------------------------
@@ -30,6 +33,10 @@ LOCALEDIR := ./locale
 
 ifeq ($(PLATFORM),mingw)
 	USERDIR := Neverball
+endif
+
+ifeq ($(PLATFORM),haiku)
+	USERDIR := /config/settings/neverball
 endif
 
 ifneq ($(BUILD),release)
@@ -99,9 +106,22 @@ ifeq ($(ENABLE_RADIANT_CONSOLE),1)
 	ALL_CPPFLAGS += -DENABLE_RADIANT_CONSOLE=1
 endif
 
+# Enable libcurl by default, disable w/ ENABLE_FETCH=0.
+ENABLE_FETCH := curl
+
+ifeq ($(ENABLE_FETCH),curl)
+	ALL_CPPFLAGS += $(shell curl-config --cflags) -DENABLE_FETCH=1
+else
+	ALL_CPPFLAGS += -DENABLE_FETCH=0
+endif
+
 ifeq ($(PLATFORM),darwin)
-	ALL_CPPFLAGS += $(patsubst %, -I%, $(wildcard /opt/local/include \
-	                                              /usr/local/include))
+    ALL_CFLAGS += -Wno-newline-eof
+    ALL_CPPFLAGS += \
+        -DGL_SILENCE_DEPRECATION=1 \
+        $(patsubst %, -I%, $(wildcard /opt/local/include \
+                                      /usr/local/include \
+                                      /opt/homebrew/include))
 endif
 
 ALL_CPPFLAGS += $(CPPFLAGS)
@@ -139,9 +159,6 @@ ENABLE_FS := stdio
 ifeq ($(ENABLE_FS),stdio)
 FS_LIBS :=
 endif
-ifeq ($(ENABLE_FS),physfs)
-FS_LIBS := -lphysfs
-endif
 
 # The  non-conditionalised values  below  are specific  to the  native
 # system. The native system of this Makefile is Linux (or GNU+Linux if
@@ -153,11 +170,15 @@ INTL_LIBS :=
 ifeq ($(ENABLE_TILT),wii)
 	TILT_LIBS := -lcwiimote -lbluetooth
 else
+ifeq ($(ENABLE_TILT),wiiuse)
+	TILT_LIBS := -lwiiuse
+else
 ifeq ($(ENABLE_TILT),loop)
 	TILT_LIBS := -lusb-1.0 -lfreespace
 else
 ifeq ($(ENABLE_TILT),leapmotion)
 	TILT_LIBS := /usr/lib/Leap/libLeap.so -Wl,-rpath,/usr/lib/Leap
+endif
 endif
 endif
 endif
@@ -173,7 +194,6 @@ ifeq ($(PLATFORM),mingw)
 		INTL_LIBS := -lintl
 	endif
 
-	TILT_LIBS :=
 	OGL_LIBS  := -lopengl32
 endif
 
@@ -182,22 +202,36 @@ ifeq ($(PLATFORM),darwin)
 		INTL_LIBS := -lintl
 	endif
 
-	TILT_LIBS :=
 	OGL_LIBS  := -framework OpenGL
+endif
+
+ifeq ($(PLATFORM),haiku)
+	ifneq ($(ENABLE_NLS),0)
+		INTL_LIBS := -lintl
+	endif
 endif
 
 BASE_LIBS := -ljpeg $(PNG_LIBS) $(FS_LIBS) -lm
 
 ifeq ($(PLATFORM),darwin)
 	BASE_LIBS += $(patsubst %, -L%, $(wildcard /opt/local/lib \
-	                                           /usr/local/lib))
+                                                   /usr/local/lib \
+                                                   /opt/homebrew/lib))
 endif
 
 OGG_LIBS := -lvorbisfile
 TTF_LIBS := -lSDL2_ttf
 
+ifeq ($(PLATFORM),haiku)
+	TTF_LIBS := -lSDL2_ttf -lfreetype
+endif
+
+ifeq ($(ENABLE_FETCH),curl)
+	CURL_LIBS := $(shell curl-config --libs)
+endif
+
 ALL_LIBS := $(HMD_LIBS) $(TILT_LIBS) $(INTL_LIBS) $(TTF_LIBS) \
-	$(OGG_LIBS) $(SDL_LIBS) $(OGL_LIBS) $(BASE_LIBS)
+	$(CURL_LIBS) $(OGG_LIBS) $(SDL_LIBS) $(OGL_LIBS) $(BASE_LIBS)
 
 MAPC_LIBS := $(BASE_LIBS)
 
@@ -228,6 +262,7 @@ MAPC_OBJS := \
 	share/base_image.o  \
 	share/solid_base.o  \
 	share/binary.o      \
+	share/log.o         \
 	share/base_config.o \
 	share/common.o      \
 	share/fs_common.o   \
@@ -275,6 +310,9 @@ BALL_OBJS := \
 	share/fs_jpg.o      \
 	share/fs_ov.o       \
 	share/log.o         \
+	share/joy.o         \
+	share/package.o     \
+	share/st_package.o  \
 	ball/hud.o          \
 	ball/game_common.o  \
 	ball/game_client.o  \
@@ -342,6 +380,7 @@ PUTT_OBJS := \
 	share/glsl.o        \
 	share/array.o       \
 	share/log.o         \
+	share/joy.o         \
 	putt/hud.o          \
 	putt/game.o         \
 	putt/hole.o         \
@@ -354,18 +393,16 @@ BALL_OBJS += share/solid_sim_sol.o
 PUTT_OBJS += share/solid_sim_sol.o
 
 ifeq ($(ENABLE_FS),stdio)
-BALL_OBJS += share/fs_stdio.o
-PUTT_OBJS += share/fs_stdio.o
-MAPC_OBJS += share/fs_stdio.o
-endif
-ifeq ($(ENABLE_FS),physfs)
-BALL_OBJS += share/fs_physfs.o
-PUTT_OBJS += share/fs_physfs.o
-MAPC_OBJS += share/fs_physfs.o
+BALL_OBJS += share/fs_stdio.o share/zip.o
+PUTT_OBJS += share/fs_stdio.o share/zip.o
+MAPC_OBJS += share/fs_stdio.o share/zip.o
 endif
 
 ifeq ($(ENABLE_TILT),wii)
 BALL_OBJS += share/tilt_wii.o
+else
+ifeq ($(ENABLE_TILT),wiiuse)
+BALL_OBJS += share/tilt_wiiuse.o
 else
 ifeq ($(ENABLE_TILT),loop)
 BALL_OBJS += share/tilt_loop.o
@@ -374,6 +411,7 @@ ifeq ($(ENABLE_TILT),leapmotion)
 BALL_OBJS += share/tilt_leapmotion.o
 else
 BALL_OBJS += share/tilt_null.o
+endif
 endif
 endif
 endif
@@ -395,6 +433,13 @@ ifeq ($(PLATFORM),mingw)
 BALL_OBJS += neverball.ico.o
 PUTT_OBJS += neverputt.ico.o
 endif
+
+FETCH_OBJS := share/fetch_null.o
+ifeq ($(ENABLE_FETCH),curl)
+FETCH_OBJS := share/fetch_curl.o
+endif
+
+BALL_OBJS += $(FETCH_OBJS)
 
 BALL_DEPS := $(BALL_OBJS:.o=.d)
 PUTT_DEPS := $(PUTT_OBJS:.o=.d)
@@ -468,7 +513,8 @@ desktops : $(DESKTOPS)
 
 clean-src :
 	$(RM) $(BALL_TARG) $(PUTT_TARG) $(MAPC_TARG)
-	find . \( -name '*.o' -o -name '*.d' \) -delete
+	find ball share putt \( -name '*.o' -o -name '*.d' \) -delete
+	$(RM) neverball.ico.o neverputt.ico.o
 
 clean : clean-src
 	$(RM) $(SOLS)

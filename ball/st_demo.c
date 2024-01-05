@@ -14,6 +14,10 @@
 
 #include <string.h>
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #include "gui.h"
 #include "hud.h"
 #include "set.h"
@@ -45,14 +49,18 @@ static int first = 0;
 static int total = 0;
 static int last  = 0;
 
+static int selected = 0;
 static int last_viewed = 0;
 
 /*---------------------------------------------------------------------------*/
 
 enum
 {
-    DEMO_SELECT = GUI_LAST
+    DEMO_PLAY = GUI_LAST,
+    DEMO_SELECT
 };
+
+static void demo_select(int i);
 
 static int demo_action(int tok, int val)
 {
@@ -74,9 +82,13 @@ static int demo_action(int tok, int val)
         break;
 
     case DEMO_SELECT:
-        if (progress_replay(DIR_ITEM_GET(items, val)->path))
+        demo_select(val);
+        break;
+
+    case DEMO_PLAY:
+        if (progress_replay(DIR_ITEM_GET(items, selected)->path))
         {
-            last_viewed = val;
+            last_viewed = selected;
             demo_play_goto(0);
             return goto_state(&st_demo_play);
         }
@@ -90,8 +102,9 @@ static int demo_action(int tok, int val)
 static struct thumb
 {
     int item;
-    int shot;
-    int name;
+    int shot_id;
+    int name_id;
+    int thumb_id;
 } thumbs[DEMO_STEP];
 
 static int gui_demo_thumbs(int id)
@@ -118,22 +131,28 @@ static int gui_demo_thumbs(int id)
                     {
                         if ((ld = gui_vstack(kd)))
                         {
+                            const int ww = MIN(w, h) * 2 / 9;
+                            const int hh = ww / 4 * 3;
+
                             gui_space(ld);
 
-                            thumb->shot = gui_image(ld, " ", w / 6, h / 6);
-                            thumb->name = gui_label(ld, " ", GUI_SML,
-                                                    gui_wht, gui_wht);
+                            thumb->shot_id = gui_image(ld, " ", ww, hh);
+                            thumb->name_id = gui_label(ld, " ", GUI_SML,
+                                                       gui_wht, gui_wht);
 
-                            gui_set_trunc(thumb->name, TRUNC_TAIL);
+                            gui_set_trunc(thumb->name_id, TRUNC_TAIL);
                             gui_set_state(ld, DEMO_SELECT, j);
+
+                            thumb->thumb_id = ld;
                         }
                     }
                     else
                     {
                         gui_space(kd);
 
-                        thumb->shot = 0;
-                        thumb->name = 0;
+                        thumb->shot_id = 0;
+                        thumb->name_id = 0;
+                        thumb->thumb_id = 0;
                     }
                 }
             }
@@ -147,13 +166,13 @@ static void gui_demo_update_thumbs(void)
     struct demo *demo;
     int i;
 
-    for (i = 0; i < ARRAYSIZE(thumbs) && thumbs[i].shot && thumbs[i].name; i++)
+    for (i = 0; i < ARRAYSIZE(thumbs) && thumbs[i].shot_id && thumbs[i].name_id; i++)
     {
         item = DIR_ITEM_GET(items, thumbs[i].item);
         demo = item->data;
 
-        gui_set_image(thumbs[i].shot, demo ? demo->shot : "");
-        gui_set_label(thumbs[i].name, demo ? demo->name : base_name(item->path));
+        gui_set_image(thumbs[i].shot_id, demo ? demo->shot : "");
+        gui_set_label(thumbs[i].name_id, demo ? demo->name : base_name(item->path));
     }
 }
 
@@ -274,6 +293,15 @@ static void gui_demo_update_status(int i)
     gui_set_clock(time_id, d->timer);
 }
 
+static void demo_select(int demo)
+{
+    gui_set_hilite(thumbs[selected % DEMO_STEP].thumb_id, 0);
+    selected = demo;
+    gui_set_hilite(thumbs[selected % DEMO_STEP].thumb_id, 1);
+
+    gui_demo_update_status(demo);
+}
+
 /*---------------------------------------------------------------------------*/
 
 static int demo_gui(void)
@@ -300,6 +328,8 @@ static int demo_gui(void)
 
         gui_demo_update_thumbs();
         gui_demo_update_status(last_viewed);
+
+        demo_select(first);
     }
     else
     {
@@ -355,22 +385,6 @@ static void demo_timer(int id, float dt)
     gui_timer(id, dt);
 }
 
-static void demo_point(int id, int x, int y, int dx, int dy)
-{
-    int jd = shared_point_basic(id, x, y);
-
-    if (jd && gui_token(jd) == DEMO_SELECT)
-        gui_demo_update_status(gui_value(jd));
-}
-
-static void demo_stick(int id, int a, float v, int bump)
-{
-    int jd = shared_stick_basic(id, a, v, bump);
-
-    if (jd && gui_token(jd) == DEMO_SELECT)
-        gui_demo_update_status(gui_value(jd));
-}
-
 static int demo_keybd(int c, int d)
 {
     if (d)
@@ -390,13 +404,25 @@ static int demo_buttn(int b, int d)
         if (config_tst_d(CONFIG_JOYSTICK_BUTTON_A, b))
         {
             if (total)
-                return demo_action(gui_token(active), gui_value(active));
+            {
+                int token = gui_token(active);
+                int value = gui_value(active);
+
+                if (token == DEMO_SELECT && value == selected)
+                    return demo_action(DEMO_PLAY, 0);
+                else
+                    return demo_action(token, value);
+            }
             else
                 return demo_action(GUI_BACK, 0);
         }
 
         if (config_tst_d(CONFIG_JOYSTICK_BUTTON_B, b))
             return demo_action(GUI_BACK, 0);
+        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_L1, b) && first > 0)
+            return demo_action(GUI_PREV, 0);
+        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_R1, b) && first + DEMO_STEP < total)
+            return demo_action(GUI_NEXT, 0);
     }
     return 1;
 }
@@ -554,7 +580,8 @@ static int demo_play_buttn(int b, int d)
 {
     if (d)
     {
-        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_B, b) ||
+        if (config_tst_d(CONFIG_JOYSTICK_BUTTON_A, b) ||
+            config_tst_d(CONFIG_JOYSTICK_BUTTON_B, b) ||
             config_tst_d(CONFIG_JOYSTICK_BUTTON_START, b))
         {
             demo_paused = 1;
@@ -612,11 +639,13 @@ static int demo_end_gui(void)
         else
             kd = gui_label(id, _("Replay Ends"),   GUI_LRG, gui_gry, gui_red);
 
+        gui_space(id);
+
         if ((jd = gui_harray(id)))
         {
             if (standalone)
             {
-                gui_start(jd, _("Quit"), GUI_SML, DEMO_QUIT, 0);
+                gui_start(jd, _("Exit"), GUI_SML, DEMO_QUIT, 0);
             }
             else
             {
@@ -763,9 +792,9 @@ static int demo_compat_gui(void)
     {
         gui_label(id, _("Warning!"), GUI_MED, 0, 0);
         gui_space(id);
-        gui_multi(id, _("The current replay was recorded with a\\"
-                        "different (or unknown) version of this level.\\"
-                        "Be prepared to encounter visual errors.\\"),
+        gui_multi(id, _("The current replay was recorded with a\n"
+                        "different (or unknown) version of this level.\n"
+                        "Be prepared to encounter visual errors.\n"),
                   GUI_SML, gui_wht, gui_wht);
 
         gui_layout(id, 0, 0);
@@ -816,8 +845,8 @@ struct state st_demo = {
     demo_leave,
     shared_paint,
     demo_timer,
-    demo_point,
-    demo_stick,
+    shared_point,
+    shared_stick,
     shared_angle,
     shared_click,
     demo_keybd,
@@ -832,7 +861,7 @@ struct state st_demo_play = {
     NULL,
     demo_play_stick,
     NULL,
-    NULL,
+    shared_click_basic,
     demo_play_keybd,
     demo_play_buttn,
     demo_play_wheel
